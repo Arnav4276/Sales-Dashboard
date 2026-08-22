@@ -148,7 +148,8 @@ with st.container(border=True):
             date_range = st.date_input("📅 Chart Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
             
         with ctrl3:
-            chart_metric = st.selectbox("📈 Chart Metric", ["Total Revenue (₹)", "Number of Orders"])
+            # ---> DUAL CHART METRIC UPDATE <---
+            chart_metric = st.selectbox("📈 Chart Metric", ["Both (Revenue & Orders)", "Total Revenue (₹)", "Number of Orders"])
             
         with ctrl4:
             all_reps = [rep for rep in df_leaderboard["sales_representative"].tolist() if rep != "-"]
@@ -229,17 +230,47 @@ with st.container(border=True):
         st.markdown("<br>", unsafe_allow_html=True)
 
         # --- ROW 3: CHARTS ---
-        col_daily, col_monthly = st.columns(2)
-        y_axis_daily = "total_revenue" if chart_metric == "Total Revenue (₹)" else "no_of_sales"
+        # ---> DYNAMIC CHART LOGIC FOR DUAL AXIS <---
+        if chart_metric == "Both (Revenue & Orders)":
+            y_axis_daily = ["total_revenue", "no_of_sales"]
+            daily_colors = ["#FF7F0E", "#1F77B4"] # Orange and Blue
+            title_metric = "Revenue & Orders"
+            y_title_primary = "Total Revenue (₹)"
+        elif chart_metric == "Total Revenue (₹)":
+            y_axis_daily = "total_revenue"
+            daily_colors = ["#FF7F0E"]
+            title_metric = "Total Revenue"
+            y_title_primary = "Total Revenue (₹)"
+        else:
+            y_axis_daily = "no_of_sales"
+            daily_colors = ["#1F77B4"]
+            title_metric = "Number of Orders"
+            y_title_primary = "Number of Orders"
+
         y_axis_monthly = "no_of_sales"
+
+        col_daily, col_monthly = st.columns(2)
 
         with col_daily:
             with st.container(border=True):
-                st.markdown(f"#### 📊 Daily Performance ({chart_metric.replace(' (₹)', '')})")
-                fig_daily = px.line(df_daily_filtered, x="order_date", y=y_axis_daily, markers=True, color_discrete_sequence=["#FF7F0E"])
+                st.markdown(f"#### 📊 Daily Performance ({title_metric})")
+                
+                # We feed the dynamic variables into Plotly
+                fig_daily = px.line(df_daily_filtered, x="order_date", y=y_axis_daily, markers=True, color_discrete_sequence=daily_colors)
                 fig_daily.update_traces(line=dict(width=2), marker=dict(size=6))
+                
+                # If "Both" is selected, we map the Orders line to a Secondary Y-Axis on the right side!
+                if chart_metric == "Both (Revenue & Orders)":
+                    fig_daily.update_traces(yaxis="y2", selector=dict(name="no_of_sales"))
+                    fig_daily.update_layout(
+                        yaxis2=dict(title="Number of Orders", overlaying="y", side="right", showgrid=False),
+                        legend=dict(title="", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
+                    # Make legend names professional
+                    fig_daily.for_each_trace(lambda t: t.update(name="Revenue (₹)" if t.name=="total_revenue" else "Orders"))
+
                 fig_daily.update_xaxes(showgrid=False, title="Date", tickformat="%d-%m", tickangle=-90, tickmode="array", tickvals=df_daily_filtered["order_date"])
-                fig_daily.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.2)", title=chart_metric)
+                fig_daily.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.2)", title=y_title_primary)
                 fig_daily.update_layout(height=320, hovermode="x unified", plot_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10, l=10, r=10))
                 st.plotly_chart(fig_daily, use_container_width=True)
 
