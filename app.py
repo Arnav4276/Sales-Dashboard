@@ -125,15 +125,18 @@ with st.container(border=True):
         master_date = st.date_input("🌍 Master Date", datetime.date(2026, 5, 25))
         master_date_str = master_date.strftime("%Y-%m-%d")
 
-    # --- TARGETED FIX 2: Inject the HTML back into the placeholder using the selected master_date! ---
+    # --- UPDATED BADGE HTML: Stacks 'Administrator' nicely under your name! ---
     date_badge_placeholder.markdown(f"""
-    <div style="background-color: var(--secondary-background-color); padding: 10px 20px; border-radius: 30px; 
-                font-size: 14px; font-weight: bold; color: var(--text-color); float: right; 
+    <div style="background-color: var(--secondary-background-color); padding: 8px 20px; border-radius: 30px; 
+                color: var(--text-color); float: right; 
                 border: 1px solid rgba(128, 128, 128, 0.25);
-                box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-top: 15px; display: flex; gap: 15px;">
-        <span style="color: #1F77B4;">👤 Administrator</span>
-        <span style="color: #A0A0A0;">|</span>
-        <span>📅 {master_date.strftime('%d %b %Y')}</span>
+                box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-top: 15px; display: flex; align-items: center; gap: 15px;">
+        <div style="display: flex; flex-direction: column; line-height: 1.1;">
+            <span style="color: #1F77B4; font-weight: bold; font-size: 15px;">👤 Arnav Singh</span>
+            <span style="color: #888888; font-size: 10px; font-weight: bold; margin-top: 2px; text-transform: uppercase;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Administrator</span>
+        </div>
+        <span style="color: #A0A0A0; font-size: 18px;">|</span>
+        <span style="font-weight: bold; font-size: 14px;">📅 {master_date.strftime('%d %b %Y')}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -148,7 +151,6 @@ with st.container(border=True):
             date_range = st.date_input("📅 Chart Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
             
         with ctrl3:
-            # ---> DUAL CHART METRIC UPDATE <---
             chart_metric = st.selectbox("📈 Chart Metric", ["Both (Revenue & Orders)", "Total Revenue (₹)", "Number of Orders"])
             
         with ctrl4:
@@ -230,7 +232,6 @@ with st.container(border=True):
         st.markdown("<br>", unsafe_allow_html=True)
 
         # --- ROW 3: CHARTS ---
-        # ---> DYNAMIC CHART LOGIC FOR DUAL AXIS <---
         if chart_metric == "Both (Revenue & Orders)":
             y_axis_daily = ["total_revenue", "no_of_sales"]
             daily_colors = ["#FF7F0E", "#1F77B4"] # Orange and Blue
@@ -255,18 +256,15 @@ with st.container(border=True):
             with st.container(border=True):
                 st.markdown(f"#### 📊 Daily Performance ({title_metric})")
                 
-                # We feed the dynamic variables into Plotly
                 fig_daily = px.line(df_daily_filtered, x="order_date", y=y_axis_daily, markers=True, color_discrete_sequence=daily_colors)
                 fig_daily.update_traces(line=dict(width=2), marker=dict(size=6))
                 
-                # If "Both" is selected, we map the Orders line to a Secondary Y-Axis on the right side!
                 if chart_metric == "Both (Revenue & Orders)":
                     fig_daily.update_traces(yaxis="y2", selector=dict(name="no_of_sales"))
                     fig_daily.update_layout(
                         yaxis2=dict(title="Number of Orders", overlaying="y", side="right", showgrid=False),
                         legend=dict(title="", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
-                    # Make legend names professional
                     fig_daily.for_each_trace(lambda t: t.update(name="Revenue (₹)" if t.name=="total_revenue" else "Orders"))
 
                 fig_daily.update_xaxes(showgrid=False, title="Date", tickformat="%d-%m", tickangle=-90, tickmode="array", tickvals=df_daily_filtered["order_date"])
